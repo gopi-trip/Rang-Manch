@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlmodel import Session, select, func
 from model import (ReviewCreate, ReviewRead, ReviewUpate, Review)
 from database import get_session
+from exceptions import (NoReviewsFound,no_reviews_found_handler)
 
 router = APIRouter(prefix="/review",tags=["reviews"])
 
@@ -30,3 +31,26 @@ def get_reviews(
     reviews = session.exec(query).all()
 
     return reviews
+
+#Calculating the average rating
+@router.get("/average/{play_name}")
+def get_average_rating(play_name:str, session: Session = Depends(get_session)):
+    result = session.exec(
+        select(
+            func.avg(Review.rating), 
+            func.count(Review.id)
+        ).where(Review.play_name == play_name)
+    ).first()
+
+    avg_rating,total_reviews = result
+
+    if total_reviews == 0:
+        raise NoReviewsFound(play_name=play_name) 
+
+    return {
+        "Play Name":play_name,
+        "Average rating": round(avg_rating,2),
+        "Total reviews": total_reviews
+    }
+
+    
