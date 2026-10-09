@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from database import (create_tables)
 from routes.reviews import router as reviews_router
-from exceptions import (NoReviewsFound,no_reviews_found_handler)
+from exceptions import (NoReviewsFound,no_reviews_found_handler,NoReviewFound,no_review_found_handler)
 
 @asynccontextmanager
 async def lifespan(app:FastAPI):
@@ -19,6 +19,7 @@ app = FastAPI(
 )
 
 app.add_exception_handler(NoReviewsFound,no_reviews_found_handler)
+app.add_exception_handler(NoReviewFound,no_review_found_handler)
 
 app.include_router(reviews_router)
 
