@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlmodel import Session, select, func
 from model import (ReviewCreate, ReviewRead, ReviewUpate, Review)
 from database import get_session
-from exceptions import (NoReviewsFound,no_reviews_found_handler)
+from exceptions import (NoReviewsFound,NoReviewFound)
 
 router = APIRouter(prefix="/review",tags=["reviews"])
 
@@ -53,4 +53,63 @@ def get_average_rating(play_name:str, session: Session = Depends(get_session)):
         "Total reviews": total_reviews
     }
 
-    
+
+@router.get("/{id}",response_model=ReviewRead)
+def get_review_by_id(id:int, session: Session = Depends(get_session)):
+
+    result = session.exec(
+        select(
+           Review.play_name,
+           Review.reviewer_name,
+           Review.created_at 
+        ).where(Review.id == id)
+    )
+
+    if not result:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "Error":"No review corresponding to the id:{id}"
+            }
+        )
+
+    play_name,revier_name,created_at = result
+
+    return {
+        "Play name":play_name,
+        "Reviewer name":revier_name,
+        "Review created at":created_at
+    }
+
+
+@router.patch("/{id}",response_model=ReviewRead)
+def update_review_by_id(id:int, request: ReviewUpate,session: Session = Depends(get_session)):
+    review = session.get(Review,id)
+
+    if not review:
+        raise NoReviewFound(id=id)
+
+    update_data = request.model_dump(exclude_unset=True)
+
+    for key,value in update_data.items():
+        setattr(review,key,value)
+
+    session.add(review)
+    session.commit()
+    session.refresh(review)
+
+    return review
+       
+@router.delete("/{id}")
+def delete_review(id: int,session: Session = Depends(get_session)):
+    review = session.get(Review,id)
+
+    if not review:
+        raise NoReviewFound(id=id)
+
+    session.delete(review)
+    session.commit()
+
+    return {
+        "Message":"The review with the ID: {id} has been deleted"
+    }
