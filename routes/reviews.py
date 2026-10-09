@@ -57,13 +57,7 @@ def get_average_rating(play_name:str, session: Session = Depends(get_session)):
 @router.get("/{id}",response_model=ReviewRead)
 def get_review_by_id(id:int, session: Session = Depends(get_session)):
 
-    result = session.exec(
-        select(
-           Review.play_name,
-           Review.reviewer_name,
-           Review.created_at 
-        ).where(Review.id == id)
-    )
+    result = session.get(Review,id) 
 
     if not result:
         raise HTTPException(
@@ -73,13 +67,14 @@ def get_review_by_id(id:int, session: Session = Depends(get_session)):
             }
         )
 
-    play_name,revier_name,created_at = result
-
-    return {
-        "Play name":play_name,
-        "Reviewer name":revier_name,
-        "Review created at":created_at
-    }
+    return ReviewRead(
+        id=id,
+        reviewer_name=result.reviewer_name,
+        play_name=result.play_name,
+        rating=result.rating,
+        comment=result.comment,
+        created_at=result.created_at
+    )
 
 
 @router.patch("/{id}",response_model=ReviewRead)
@@ -111,5 +106,5 @@ def delete_review(id: int,session: Session = Depends(get_session)):
     session.commit()
 
     return {
-        "Message":"The review with the ID: {id} has been deleted"
+        "Message":f"The review with the ID: {id} has been deleted"
     }
